@@ -59,6 +59,7 @@ tailcall-http-cache = { path = "tailcall-http-cache", optional = true }
 tailcall-version = { path = "./tailcall-version", optional = true }
 genai = { git = "https://github.com/laststylebender14/rust-genai.git", rev = "63a542ce20132503c520f4e07108e0d768f243c3", optional = true }
 ctrlc = { version = "3.4.5", optional = true }
+tailcall-enterprise = { path = "./tailcall-enterprise", optional = true }
 
 # dependencies safe for wasm:
 
@@ -238,6 +239,7 @@ cli = [
     "dep:tailcall-version",
     "dep:genai",
     "dep:ctrlc",
+    "dep:tailcall-enterprise",
 ]
 
 # Feature flag to enable all default features.
@@ -263,7 +265,8 @@ members = [
     "tailcall-wasm",
     "tailcall-hasher",
     "tailcall-http-cache",
-    "tailcall-version",
+    "tailcall-version", 
+    "tailcall-enterprise",
 ]
 
 # Boost execution_spec snapshot diffing performance

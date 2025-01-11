@@ -6,6 +6,7 @@ use prost_reflect::prost_types::{FileDescriptorProto, FileDescriptorSet};
 use rustls_pki_types::{CertificateDer, PrivateKeyDer};
 use tailcall_valid::{Valid, Validator};
 
+use super::LinkType;
 use crate::core::config::Config;
 use crate::core::macros::MergeRight;
 use crate::core::merge_right::MergeRight;
@@ -51,6 +52,17 @@ impl From<Config> for Cache {
 impl ConfigModule {
     pub fn new(config: Config, extensions: Extensions) -> Self {
         ConfigModule { cache: Cache::from(config), extensions }
+    }
+
+    /// Identifies if an enterprise feature is being used
+    pub fn is_enterprise_features_enabled(&self) -> bool {
+        let js_capability_enabled = self
+            .config()
+            .links
+            .iter()
+            .any(|link| matches!(link.type_of, LinkType::Script));
+        let telemetry_capability_enabled = self.config().telemetry.is_enabled();
+        js_capability_enabled || telemetry_capability_enabled
     }
 
     pub fn set_extensions(mut self, extensions: Extensions) -> Self {

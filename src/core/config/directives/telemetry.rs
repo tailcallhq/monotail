@@ -97,6 +97,10 @@ pub struct Telemetry {
 }
 
 impl Telemetry {
+    pub fn is_enabled(&self) -> bool {
+        self.export.is_some()
+    }
+
     pub fn merge_right(mut self, other: Self) -> Self {
         self.export = match (&self.export, other.export) {
             (None, None) => None,
