@@ -642,7 +642,7 @@ dependencies = [
  "bitflags 2.6.0",
  "cexpr",
  "clang-sys",
- "itertools 0.10.5",
+ "itertools 0.11.0",
  "lazy_static",
  "lazycell",
  "log",
@@ -1529,6 +1529,12 @@ checksum = "4f2c92ceda6ceec50f43169f9ee8424fe2db276791afde7b2cd8bc084cb376ab"
 dependencies = [
  "log",
 ]
+
+[[package]]
+name = "env_home"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c7f84e12ccf0a7ddc17a6c41c93326024c42920d7ee630d04950e6926645c0fe"
 
 [[package]]
 name = "env_logger"
@@ -2999,7 +3005,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4979f22fdb869068da03c9f7528f8297c6fd2606bc3a4affe42e6a823fdb8da4"
 dependencies = [
  "cfg-if",
- "windows-targets 0.48.5",
+ "windows-targets 0.52.6",
 ]
 
 [[package]]
@@ -4151,7 +4157,7 @@ checksum = "22505a5c94da8e3b7c2996394d1c933236c4d743e81a410bcca4e6989fc066a4"
 dependencies = [
  "bytes",
  "heck",
- "itertools 0.10.5",
+ "itertools 0.11.0",
  "log",
  "multimap",
  "once_cell",
@@ -4171,7 +4177,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "81bddcdb20abf9501610992b6759a4c888aef7d1a7247ef75e2404275ac24af1"
 dependencies = [
  "anyhow",
- "itertools 0.10.5",
+ "itertools 0.11.0",
  "proc-macro2",
  "quote",
  "syn 2.0.90",
@@ -4184,7 +4190,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "157c5a9d7ea5c2ed2d9fb8f495b64759f7816c7eaea54ba3978f0d63000162e3"
 dependencies = [
  "anyhow",
- "itertools 0.10.5",
+ "itertools 0.11.0",
  "proc-macro2",
  "quote",
  "syn 2.0.90",
@@ -5718,7 +5724,7 @@ dependencies = [
  "update-informer",
  "url",
  "urlencoding",
- "which 6.0.3",
+ "which 7.0.1",
 ]
 
 [[package]]
@@ -6866,12 +6872,12 @@ dependencies = [
 
 [[package]]
 name = "which"
-version = "6.0.3"
+version = "7.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b4ee928febd44d98f2f459a4a79bd4d928591333a494a10a868418ac1b39cf1f"
+checksum = "fb4a9e33648339dc1642b0e36e21b3385e6148e289226f657c809dee59df5028"
 dependencies = [
  "either",
- "home",
+ "env_home",
  "rustix",
  "winsafe",
 ]
@@ -6909,7 +6915,7 @@ version = "0.1.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cf221c93e13a30d793f7645a0e7762c55d169dbb0a49671918a2319d289b10bb"
 dependencies = [
- "windows-sys 0.48.0",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
