@@ -12,9 +12,11 @@ error_exit() {
 check_files() {
   local path="./examples"
   local depth=1
-  local -a extensions=("-name" "*.json" -o "-name" "*.yml" -o "-name" "*.yaml" -o "-name" "*.graphql" -o "-name" "*.gql")
-  local command="./target/debug/tailcall check"
-  local -a ignore=("!" "-name" "grpc-reflection.graphql" "!" "-name" "generate.yml")
+  local -a extensions=("-name" "*.json" -o "-name" "*.yml" -o "-name" "*.yaml")
+  local command="cargo run -- check"
+  # ignore grpc-reflection because it requires a running grpc server
+  # ignore generate.yaml because it's used for generation and not service commands
+  local -a ignore=("!" "-name" "grpc-reflection.yaml" "!" "-name" "generate.yml")
 
   # Execute find command with constructed options and extensions
   find "$path" -maxdepth "$depth" \( "${extensions[@]}" \) "${ignore[@]}" -exec sh -c '

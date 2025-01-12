@@ -1,0 +1,16 @@
+# yaml-language-server: $schema=../generated/.tailcallrc.schema.json
+
+server:
+  port: 8000
+
+upstream:
+  httpCache: 42
+
+links:
+  - src: ./auth.graphql
+  - type: Htpasswd
+    id: auth-basic
+    src: .htpasswd
+  - type: Jwks
+    id: auth-jwt
+    src: .jwks

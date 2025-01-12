@@ -1,7 +1,8 @@
 # yaml-language-server: $schema=../generated/.tailcallrc.schema.json
 
 server:
-  port: 8000
+  port: 8002
+  enableFederation: true
 
 upstream:
   batch:
@@ -9,4 +10,4 @@ upstream:
   httpCache: 42
 
 links:
-  - src: jsonplaceholder.graphql
+  - src: ./apollo_federation_subgraph_user.graphql

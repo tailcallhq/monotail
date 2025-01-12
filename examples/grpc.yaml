@@ -1,0 +1,16 @@
+# yaml-language-server: $schema=../generated/.tailcallrc.schema.json
+
+server:
+  port: 8000
+
+upstream:
+  httpCache: 42
+  batch:
+    delay: 10
+
+links:
+  - src: grpc.graphql
+  # for test upstream server see [repo](https://github.com/tailcallhq/rust-grpc)
+  - type: Protobuf
+    id: news
+    src: "../tailcall-fixtures/fixtures/protobuf/news.proto"

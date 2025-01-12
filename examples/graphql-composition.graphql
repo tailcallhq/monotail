@@ -1,10 +1,6 @@
 # To run this example first start another tailcall server with basic example
-# i.e. `tc start examples/jsonplaceholder.graphql`
+# i.e. `tc start examples/jsonplaceholder.yaml`
 # and then you can run this example and test it on 8001 port
-
-schema @server(port: 8001, queryValidation: false, hostname: "0.0.0.0") @upstream(httpCache: 42, batch: {delay: 1}) {
-  query: Query
-}
 
 type Query {
   posts: [Post] @graphQL(url: "http://jsonplaceholder.typicode.com", name: "posts")

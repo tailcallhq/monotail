@@ -5,8 +5,9 @@ server:
 
 upstream:
   batch:
-    delay: 100
+    delay: 1
+    maxSize: 1000
   httpCache: 42
 
 links:
-  - src: jsonplaceholder.graphql
+  - src: jsonplaceholder_batch.graphql

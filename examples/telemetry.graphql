@@ -1,24 +1,3 @@
-schema
-  @server(port: 8000, hostname: "0.0.0.0")
-  @upstream(httpCache: 42)
-  @link(type: Operation, src: "operations/routes.graphql")
-  @link(id: "news", src: "../tailcall-fixtures/fixtures/protobuf/news.proto", type: Protobuf)
-  @telemetry(
-    export: {
-      otlp: {
-        url: "https://api.honeycomb.io:443"
-        # gather api key from https://ui.honeycomb.io and set it as env when running tailcall
-        headers: [
-          {key: "x-honeycomb-team", value: "{{.env.HONEYCOMB_API_KEY}}"}
-          {key: "x-honeycomb-dataset", value: "tailcall"}
-        ]
-      }
-    }
-    requestHeaders: ["user-id"]
-  ) {
-  query: Query
-}
-
 type Query {
   posts: [Post] @http(url: "http://jsonplaceholder.typicode.com/posts") @cache(maxAge: 3000)
   user(id: Int!): User @http(url: "http://jsonplaceholder.typicode.com/users/{{.args.id}}")

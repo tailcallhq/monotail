@@ -1,0 +1,26 @@
+# yaml-language-server: $schema=../generated/.tailcallrc.schema.json
+
+server:
+  port: 8000
+  hostname: "0.0.0.0"
+
+upstream:
+  httpCache: 42
+
+links:
+  - src: ./telemetry.graphql
+  - type: Operation
+    src: operations/routes.graphql
+  - type: Protobuf
+    id: news
+    src: "../tailcall-fixtures/fixtures/protobuf/news.proto"
+
+telemetry:
+  export:
+    otlp:
+      url: "https://api.honeycomb.io:443"
+      headers:
+        - key: x-honeycomb-team
+          value: "{{.env.HONEYCOMB_API_KEY}}"
+        - key: x-honeycomb-dataset
+          value: tailcall

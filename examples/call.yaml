@@ -1,0 +1,4 @@
+# yaml-language-server: $schema=../generated/.tailcallrc.schema.json
+
+links:
+  - src: ./call.graphql

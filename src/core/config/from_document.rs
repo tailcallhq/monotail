@@ -78,6 +78,7 @@ fn process_schema_directives<T: DirectiveCodec + Default>(
     let mut res = Valid::succeed(T::default());
     for directive in schema_definition.directives.iter() {
         if directive.node.name.node.as_ref() == directive_name {
+            tracing::warn!("@{} directive definition in the graphql schema file is deprecated. Please, refer to blog post https://tailcall.run/blog/migrating-to-graphql-configuration-v2/", directive_name);
             res = T::from_directive(&directive.node);
         }
     }

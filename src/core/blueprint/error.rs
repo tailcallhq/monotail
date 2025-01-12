@@ -136,9 +136,6 @@ pub enum BlueprintError {
     #[error("unknown template directive '{0}'")]
     UnknownTemplateDirective(String),
 
-    #[error("Query root is missing")]
-    QueryRootIsMissing,
-
     #[error("Query type is not defined")]
     QueryTypeNotDefined,
 

@@ -1,3 +1,0 @@
-schema @server @upstream @link(type: Config, src: "jsonplaceholder.graphql") {
-  query: Query
-}

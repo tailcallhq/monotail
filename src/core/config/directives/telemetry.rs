@@ -87,6 +87,8 @@ pub enum TelemetryExporter {
 /// by Tailcall.  By leveraging this directive, developers gain access to
 /// valuable insights into the performance and behavior of their applications.
 pub struct Telemetry {
+    #[serde(with = "serde_yaml_ng::with::singleton_map")]
+    #[schemars(with = "Option<TelemetryExporter>")]
     pub export: Option<TelemetryExporter>,
     /// The list of headers that will be sent as additional attributes to
     /// telemetry exporters Be careful about **leaking sensitive

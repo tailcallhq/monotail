@@ -357,7 +357,7 @@ mod reader_tests {
 
         let config = reader
             .read(format!(
-                "{}/examples/jsonplaceholder_script.graphql",
+                "{}/examples/jsonplaceholder_script.yaml",
                 cargo_manifest
             ))
             .await

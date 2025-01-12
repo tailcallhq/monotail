@@ -1,0 +1,17 @@
+# yaml-language-server: $schema=../generated/.tailcallrc.schema.json
+
+server:
+  port: 3000
+  queryValidation: false
+  hostname: "0.0.0.0"
+  version: HTTP2
+
+upstream:
+  httpCache: 42
+
+links:
+  - src: ./jsonplaceholder_http_2.graphql
+  - type: Cert
+    src: ./example.crt
+  - type: Key
+    src: ./example.key

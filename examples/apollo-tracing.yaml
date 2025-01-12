@@ -1,0 +1,14 @@
+# yaml-language-server: $schema=../generated/.tailcallrc.schema.json
+
+server:
+  port: 8000
+  hostname: "0.0.0.0"
+
+telemetry:
+  export:
+    apollo:
+      apiKey: "1234"
+      graphRef: "abc@123"
+
+links:
+  - src: ./jsonplaceholder.graphql

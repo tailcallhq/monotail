@@ -7,19 +7,24 @@ use crate::core::blueprint::*;
 use crate::core::config::{Config, Field, Type};
 use crate::core::directive::DirectiveCodec;
 
-fn validate_query(config: &Config) -> Valid<(), BlueprintError> {
-    Valid::from_option(
-        config.schema.query.clone(),
-        BlueprintError::QueryRootIsMissing,
-    )
-    .and_then(|ref query_type_name| {
-        let Some(query) = config.find_type(query_type_name) else {
-            return Valid::fail(BlueprintError::QueryTypeNotDefined).trace(query_type_name);
-        };
-        let mut set = HashSet::new();
-        validate_type_has_resolvers(query_type_name, query, &config.types, &mut set)
-    })
-    .unit()
+fn validate_query(config: &Config) -> Valid<&str, BlueprintError> {
+    let query_type_name = config
+        .schema
+        .query
+        .as_deref()
+        // Based on the [spec](https://spec.graphql.org/October2021/#sec-Root-Operation-Types.Default-Root-Operation-Type-Names)
+        // the default name for query type is `Query` is not specified explicitly
+        .unwrap_or("Query");
+
+    let Some(query) = config.find_type(query_type_name) else {
+        // from spec: The query root operation type must be provided and must be an
+        // Object type.
+        return Valid::fail(BlueprintError::QueryTypeNotDefined).trace(query_type_name);
+    };
+    let mut set = HashSet::new();
+
+    validate_type_has_resolvers(query_type_name, query, &config.types, &mut set)
+        .map_to(query_type_name)
 }
 
 /// Validates that all the root type fields has resolver
@@ -65,33 +70,40 @@ pub fn validate_field_has_resolver(
         .trace(name)
 }
 
-fn validate_mutation(config: &Config) -> Valid<(), BlueprintError> {
-    let mutation_type_name = config.schema.mutation.as_ref();
+fn validate_mutation(config: &Config) -> Valid<Option<&str>, BlueprintError> {
+    let mutation_type_name = config
+        .schema
+        .mutation
+        .as_deref()
+        // Based on the [spec](https://spec.graphql.org/October2021/#sec-Root-Operation-Types.Default-Root-Operation-Type-Names)
+        // the default name for mutation type is `Mutation` is not specified explicitly
+        .unwrap_or("Mutation");
 
-    if let Some(mutation_type_name) = mutation_type_name {
-        let Some(mutation) = config.find_type(mutation_type_name) else {
-            return Valid::fail(BlueprintError::MutationTypeNotDefined).trace(mutation_type_name);
-        };
+    if let Some(mutation) = config.find_type(mutation_type_name) {
         let mut set = HashSet::new();
         validate_type_has_resolvers(mutation_type_name, mutation, &config.types, &mut set)
+            .map_to(Some(mutation_type_name))
+    } else if config.schema.mutation.is_some() {
+        // if mutation was specified by schema but not found raise the error
+        Valid::fail(BlueprintError::MutationTypeNotDefined).trace(mutation_type_name)
     } else {
-        Valid::succeed(())
+        // otherwise if mutation is not specified and default type is not found just
+        // return None
+        Valid::succeed(None)
     }
 }
 
 pub fn to_schema<'a>() -> TryFoldConfig<'a, SchemaDefinition> {
     TryFoldConfig::new(|config, _| {
         validate_query(config)
-            .and(validate_mutation(config))
-            .and(Valid::from_option(
-                config.schema.query.as_ref(),
-                BlueprintError::QueryRootIsMissing,
-            ))
-            .zip(to_directive(config.server.to_directive()))
-            .map(|(query_type_name, directive)| SchemaDefinition {
-                query: query_type_name.to_owned(),
-                mutation: config.schema.mutation.clone(),
-                directives: vec![directive],
-            })
+            .fuse(validate_mutation(config))
+            .fuse(to_directive(config.server.to_directive()))
+            .map(
+                |(query_type_name, mutation_type_name, directive)| SchemaDefinition {
+                    query: query_type_name.to_owned(),
+                    mutation: mutation_type_name.map(|x| x.to_owned()),
+                    directives: vec![directive],
+                },
+            )
     })
 }
