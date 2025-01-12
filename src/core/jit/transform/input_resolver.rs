@@ -84,6 +84,7 @@ where
             is_const: self.plan.is_const,
             is_protected: self.plan.is_protected,
             min_cache_ttl: self.plan.min_cache_ttl,
+            interfaces: None,
             selection,
             before: self.plan.before,
         })

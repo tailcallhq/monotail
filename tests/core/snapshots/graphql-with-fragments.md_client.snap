@@ -1,0 +1,28 @@
+---
+source: tests/core/spec.rs
+expression: formatted
+snapshot_kind: text
+---
+type NodeA implements NodeC {
+  name: String
+  nodeA_id: String
+}
+
+type NodeB implements NodeC {
+  name: String
+  nodeB_id: String
+}
+
+interface NodeC {
+  name: String
+}
+
+type Query {
+  queryNodeA: [NodeA!]
+  queryNodeB: [NodeB!]
+  queryNodeC: [NodeC!]
+}
+
+schema {
+  query: Query
+}

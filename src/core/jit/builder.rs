@@ -75,6 +75,7 @@ pub struct Builder<'a> {
 impl<'a> Builder<'a> {
     pub fn new(blueprint: &Blueprint, document: &'a ExecutableDocument) -> Self {
         let index = Arc::new(blueprint.index());
+
         Self {
             document,
             index,
@@ -128,6 +129,7 @@ impl<'a> Builder<'a> {
     #[inline(always)]
     fn iter(
         &self,
+        parent_fragment: Option<&str>,
         selection: &SelectionSet,
         type_condition: &str,
         fragments: &HashMap<&str, &FragmentDefinition>,
@@ -168,6 +170,7 @@ impl<'a> Builder<'a> {
                         .map(|(k, v)| (k.node.as_str().to_string(), v.node.to_owned()))
                         .collect::<HashMap<_, _>>();
 
+                    let parent_fragment = parent_fragment.map(|s| s.to_owned());
                     // Check if the field is present in the schema index
                     if let Some(field_def) = self.index.get_field(type_condition, field_name) {
                         let mut args = Vec::with_capacity(request_args.len());
@@ -198,8 +201,12 @@ impl<'a> Builder<'a> {
                         let id = FieldId::new(self.field_id.next());
 
                         // Recursively gather child fields for the selection set
-                        let child_fields =
-                            self.iter(&gql_field.selection_set.node, type_of.name(), fragments);
+                        let child_fields = self.iter(
+                            None,
+                            &gql_field.selection_set.node,
+                            type_of.name(),
+                            fragments,
+                        );
 
                         let ir = match field_def {
                             QueryField::Field((field_def, _)) => field_def.resolver.clone(),
@@ -220,6 +227,7 @@ impl<'a> Builder<'a> {
                         let field = Field {
                             id,
                             selection: child_fields,
+                            parent_fragment,
                             name: field_name.to_string(),
                             output_name: gql_field
                                 .alias
@@ -252,6 +260,7 @@ impl<'a> Builder<'a> {
                             args: Vec::new(),
                             pos: selection.pos.into(),
                             selection: vec![], // __typename has no child selection
+                            parent_fragment,
                             directives,
                             is_enum: false,
                             scalar: Some(scalar::Scalar::Empty),
@@ -265,6 +274,7 @@ impl<'a> Builder<'a> {
                         fragments.get(fragment_spread.fragment_name.node.as_str())
                     {
                         fields.extend(self.iter(
+                            Some(fragment.type_condition.node.on.node.as_str()),
                             &fragment.selection_set.node,
                             fragment.type_condition.node.on.node.as_str(),
                             fragments,
@@ -277,8 +287,12 @@ impl<'a> Builder<'a> {
                         .as_ref()
                         .map(|cond| cond.node.on.node.as_str())
                         .unwrap_or(type_condition);
-
-                    fields.extend(self.iter(&fragment.selection_set.node, type_of, fragments));
+                    fields.extend(self.iter(
+                        Some(type_of),
+                        &fragment.selection_set.node,
+                        type_of,
+                        fragments,
+                    ));
                 }
             }
         }
@@ -334,7 +348,7 @@ impl<'a> Builder<'a> {
         let name = self
             .get_type(operation.ty)
             .ok_or(BuildError::RootOperationTypeNotDefined { operation: operation.ty })?;
-        let fields = self.iter(&operation.selection_set.node, name, &fragments);
+        let fields = self.iter(None, &operation.selection_set.node, name, &fragments);
 
         let is_introspection_query = operation.selection_set.node.items.iter().any(|f| {
             if let Selection::Field(Positioned { node: gql_field, .. }) = &f.node {
@@ -351,6 +365,7 @@ impl<'a> Builder<'a> {
             operation.ty,
             self.index.clone(),
             is_introspection_query,
+            Some(self.index.get_interfaces()),
         );
         Ok(plan)
     }

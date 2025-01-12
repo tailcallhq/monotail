@@ -1,5 +1,5 @@
 use std::borrow::Cow;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fmt::{Debug, Display, Formatter};
 use std::num::NonZeroU64;
 use std::sync::Arc;
@@ -187,6 +187,7 @@ pub struct Field<Input> {
     pub include: Option<Variable>,
     pub args: Vec<Arg<Input>>,
     pub selection: Vec<Field<Input>>,
+    pub parent_fragment: Option<String>,
     pub pos: Pos,
     pub directives: Vec<Directive<Input>>,
     pub is_enum: bool,
@@ -245,6 +246,7 @@ impl<Input> Field<Input> {
                 .into_iter()
                 .map(|f| f.try_map(map))
                 .collect::<Result<Vec<Field<Output>>, Error>>()?,
+            parent_fragment: None,
             skip: self.skip,
             include: self.include,
             pos: self.pos,
@@ -315,6 +317,7 @@ pub struct OperationPlan<Input> {
     pub min_cache_ttl: Option<NonZeroU64>,
     pub selection: Vec<Field<Input>>,
     pub before: Option<IR>,
+    pub interfaces: Option<HashSet<String>>,
 }
 
 impl<Input> OperationPlan<Input> {
@@ -339,6 +342,7 @@ impl<Input> OperationPlan<Input> {
             is_protected: self.is_protected,
             min_cache_ttl: self.min_cache_ttl,
             before: self.before,
+            interfaces: None,
         })
     }
 }
@@ -351,6 +355,7 @@ impl<Input> OperationPlan<Input> {
         operation_type: OperationType,
         index: Arc<Index>,
         is_introspection_query: bool,
+        interfaces: Option<HashSet<String>>,
     ) -> Self
     where
         Input: Clone,
@@ -366,6 +371,7 @@ impl<Input> OperationPlan<Input> {
             is_protected: false,
             min_cache_ttl: None,
             before: Default::default(),
+            interfaces,
         }
     }
 

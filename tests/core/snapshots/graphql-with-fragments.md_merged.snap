@@ -1,0 +1,28 @@
+---
+source: tests/core/spec.rs
+expression: formatter
+snapshot_kind: text
+---
+schema @server @upstream @link(src: "schema_0.graphql", type: Config) {
+  query: Query
+}
+
+interface NodeC {
+  name: String
+}
+
+type NodeA implements NodeC {
+  name: String
+  nodeA_id: String
+}
+
+type NodeB implements NodeC {
+  name: String
+  nodeB_id: String
+}
+
+type Query {
+  queryNodeA: [NodeA!] @graphQL(url: "http://upstream/graphql", name: "nodeA")
+  queryNodeB: [NodeB!] @graphQL(url: "http://upstream/graphql", name: "nodeB")
+  queryNodeC: [NodeC!] @graphQL(url: "http://upstream/graphql", name: "nodeC")
+}

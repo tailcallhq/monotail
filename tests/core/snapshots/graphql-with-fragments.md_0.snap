@@ -1,0 +1,27 @@
+---
+source: tests/core/spec.rs
+expression: response
+snapshot_kind: text
+---
+{
+  "status": 200,
+  "headers": {
+    "content-type": "application/json"
+  },
+  "body": {
+    "data": {
+      "queryNodeC": [
+        {
+          "name": "nodeA",
+          "__typename": "NodeA",
+          "nodeA_id": "nodeA_id"
+        },
+        {
+          "name": "nodeB",
+          "__typename": "NodeB",
+          "nodeB_id": "nodeB_id"
+        }
+      ]
+    }
+  }
+}
