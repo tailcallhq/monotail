@@ -10,6 +10,7 @@ use super::eval_io::eval_io;
 use super::model::{Cache, CacheKey, Map, IR};
 use super::{Error, EvalContext, ResolverContextLike, TypedValue};
 use crate::core::auth::verify::{AuthVerifier, Verify};
+use crate::core::helpers::value::arc_result_to_result;
 use crate::core::json::{JsonLike, JsonObjectLike};
 use crate::core::merge_right::MergeRight;
 use crate::core::serde_value_ext::ValueExt;
@@ -43,7 +44,7 @@ impl IR {
 
                     expr.eval(ctx).await
                 }
-                IR::IO(io) => eval_io(io, ctx).await,
+                IR::IO(io) => arc_result_to_result(eval_io(io, ctx).await),
                 IR::Cache(Cache { max_age, io }) => {
                     let io = io.deref();
                     let key = io.cache_key(ctx);
@@ -51,7 +52,8 @@ impl IR {
                         if let Some(val) = ctx.request_ctx.runtime.cache.get(&key).await? {
                             Ok(val)
                         } else {
-                            let val = eval_io(io, ctx).await?;
+                            let result = arc_result_to_result(eval_io(io, ctx).await);
+                            let val = result?;
                             ctx.request_ctx
                                 .runtime
                                 .cache
@@ -60,7 +62,7 @@ impl IR {
                             Ok(val)
                         }
                     } else {
-                        eval_io(io, ctx).await
+                        arc_result_to_result(eval_io(io, ctx).await)
                     }
                 }
                 IR::Map(Map { input, map }) => {

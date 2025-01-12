@@ -1,4 +1,7 @@
-use std::hash::{Hash, Hasher};
+use std::{
+    hash::{Hash, Hasher},
+    sync::Arc,
+};
 
 use async_graphql_value::ConstValue;
 
@@ -34,5 +37,12 @@ pub fn hash<H: Hasher>(const_value: &ConstValue, state: &mut H) {
                 hash(value, state);
             })
         }
+    }
+}
+
+pub fn arc_result_to_result<T: Clone, E: Clone>(arc_result: Arc<Result<T, E>>) -> Result<T, E> {
+    match &*arc_result {
+        Ok(t) => Ok(t.clone()),
+        Err(e) => Err(e.clone()),
     }
 }
