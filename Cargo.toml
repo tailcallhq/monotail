@@ -16,6 +16,7 @@ headers = "0.3.9" # previous version until hyper is updated to 1+
 http = "0.2.12" # previous version until hyper is updated to 1+
 insta = { version = "1.38.0", features = ["json"] }
 tokio = { version = "1.37.0", features = ["rt", "time"] }
+tokio-retry = "0.3"
 reqwest = { version = "0.11", features = [
     "json",
     "rustls-tls",
@@ -66,6 +67,7 @@ rustls-pemfile = { version = "1.0.4" }
 schemars = { version = "0.8.17", features = ["derive"] }
 hyper = { version = "0.14.28", features = ["server"], default-features = false }
 tokio = { workspace = true }
+tokio-retry = { workspace = true }
 anyhow = { workspace = true }
 reqwest = { workspace = true }
 derive_setters = "0.1.6"

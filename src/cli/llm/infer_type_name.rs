@@ -123,46 +123,40 @@ impl InferTypeName {
                     .collect(),
             };
 
-            let mut delay = 3;
-            loop {
-                let answer = self.wizard.ask(question.clone()).await;
-                match answer {
-                    Ok(answer) => {
-                        let name = &answer.suggestions.join(", ");
-                        for name in answer.suggestions {
-                            if config.types.contains_key(&name) || used_type_names.contains(&name) {
-                                continue;
-                            }
-                            used_type_names.insert(name.clone());
-                            new_name_mappings.insert(type_name.to_owned(), name);
-                            break;
-                        }
-                        tracing::info!(
-                            "Suggestions for {}: [{}] - {}/{}",
-                            type_name,
-                            name,
-                            i + 1,
-                            total
-                        );
+            // Directly use the wizard's ask method to get a result
+            let answer = self.wizard.ask(question.clone()).await;
 
-                        // TODO: case where suggested names are already used, then extend the base
-                        // question with `suggest different names, we have already used following
-                        // names: [names list]`
+            match answer {
+                Ok(answer) => {
+                    let name = &answer.suggestions.join(", ");
+                    for name in answer.suggestions {
+                        if config.types.contains_key(&name) || used_type_names.contains(&name) {
+                            continue;
+                        }
+                        used_type_names.insert(name.clone());
+                        new_name_mappings.insert(type_name.to_owned(), name);
                         break;
                     }
-                    Err(e) => {
-                        // TODO: log errors after certain number of retries.
-                        if let Error::GenAI(_) = e {
-                            // TODO: retry only when it's required.
-                            tracing::warn!(
-                                "Unable to retrieve a name for the type '{}'. Retrying in {}s",
-                                type_name,
-                                delay
-                            );
-                            tokio::time::sleep(tokio::time::Duration::from_secs(delay)).await;
-                            delay *= std::cmp::min(delay * 2, 60);
-                        }
-                    }
+                    tracing::info!(
+                        "Suggestions for {}: [{}] - {}/{}",
+                        type_name,
+                        name,
+                        i + 1,
+                        total
+                    );
+
+                    // TODO: case where suggested names are already used, then
+                    // extend the base question with
+                    // `suggest different names, we have already used following
+                    // names: [names list]`
+                }
+                Err(e) => {
+                    // Handle errors in case of failure
+                    tracing::error!(
+                        "Failed to get suggestions for type '{}': {:?}",
+                        type_name,
+                        e
+                    );
                 }
             }
         }

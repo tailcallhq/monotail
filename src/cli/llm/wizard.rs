@@ -3,8 +3,11 @@ use genai::adapter::AdapterKind;
 use genai::chat::{ChatOptions, ChatRequest, ChatResponse};
 use genai::resolver::AuthResolver;
 use genai::Client;
+use reqwest::StatusCode;
+use tokio_retry::strategy::ExponentialBackoff;
+use tokio_retry::RetryIf;
 
-use super::Result;
+use super::error::{Error, Result};
 
 #[derive(Setters, Clone)]
 pub struct Wizard<Q, A> {
@@ -40,13 +43,34 @@ impl<Q, A> Wizard<Q, A> {
 
     pub async fn ask(&self, q: Q) -> Result<A>
     where
-        Q: TryInto<ChatRequest, Error = super::Error>,
+        Q: TryInto<ChatRequest, Error = super::Error> + Clone,
         A: TryFrom<ChatResponse, Error = super::Error>,
     {
-        let response = self
-            .client
-            .exec_chat(self.model.as_str(), q.try_into()?, None)
-            .await?;
-        A::try_from(response)
+        let retry_strategy = ExponentialBackoff::from_millis(500)
+            .max_delay(std::time::Duration::from_secs(30))
+            .take(5);
+
+        RetryIf::spawn(
+            retry_strategy,
+            || async {
+                let request = q.clone().try_into()?; // Convert the question to a request
+                self.client
+                    .exec_chat(self.model.as_str(), request, None) // Execute chat request
+                    .await
+                    .map_err(Error::from)
+                    .and_then(A::try_from) // Convert the response into the
+                                           // desired result
+            },
+            |err: &Error| {
+                // Check if the error is a ReqwestError and if the status is 429
+                if let Error::Reqwest(reqwest_err) = err {
+                    if let Some(status) = reqwest_err.status() {
+                        return status == StatusCode::TOO_MANY_REQUESTS;
+                    }
+                }
+                false
+            },
+        )
+        .await
     }
 }
