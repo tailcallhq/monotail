@@ -241,20 +241,23 @@ async fn handle_rest_apis(
     *request.uri_mut() = request.uri().path().replace(API_URL_PREFIX, "").parse()?;
     let req_ctx = Arc::new(create_request_context(&request, app_ctx.as_ref()));
     if let Some(p_request) = app_ctx.endpoints.matches(&request) {
+        let (req, body) = request.into_parts();
         let http_route = format!("{API_URL_PREFIX}{}", p_request.path.as_str());
         req_counter.set_http_route(&http_route);
         let span = tracing::info_span!(
             "REST",
-            otel.name = format!("REST {} {}", request.method(), p_request.path.as_str()),
+            otel.name = format!("REST {} {}", req.method, p_request.path.as_str()),
             otel.kind = ?SpanKind::Server,
-            { HTTP_REQUEST_METHOD } = %request.method(),
+            { HTTP_REQUEST_METHOD } = %req.method,
             { HTTP_ROUTE } = http_route
         );
         return async {
-            let graphql_request = p_request.into_request(request).await?;
+            let graphql_request = p_request.into_request(body).await?;
+            let operation_id = graphql_request.operation_id(&req.headers);
+            let exec = JITExecutor::new(app_ctx.clone(), req_ctx.clone(), operation_id)
+                .flatten_response(true);
             let mut response = graphql_request
-                .data(req_ctx.clone())
-                .execute(&app_ctx.schema)
+                .execute_with_jit(exec)
                 .await
                 .set_cache_control(
                     app_ctx.blueprint.server.enable_cache_control_header,

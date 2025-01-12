@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use async_graphql_value::{ConstValue, Value};
+use derive_setters::Setters;
 use futures_util::future::join_all;
 use tailcall_valid::Validator;
 
@@ -14,17 +15,20 @@ use crate::core::ir::model::IR;
 use crate::core::ir::{self, EmptyResolverContext, EvalContext};
 use crate::core::jit::synth::Synth;
 use crate::core::jit::transform::InputResolver;
-use crate::core::json::{JsonLike, JsonLikeList};
+use crate::core::json::{JsonLike, JsonLikeList, JsonObjectLike};
 use crate::core::Transform;
 
 /// A specialized executor that executes with async_graphql::Value
+#[derive(Setters)]
 pub struct ConstValueExecutor {
     pub plan: OperationPlan<Value>,
+
+    flatten_response: bool,
 }
 
 impl From<OperationPlan<Value>> for ConstValueExecutor {
     fn from(plan: OperationPlan<Value>) -> Self {
-        Self { plan }
+        Self { plan, flatten_response: false }
     }
 }
 
@@ -56,6 +60,7 @@ impl ConstValueExecutor {
 
         let is_introspection_query =
             req_ctx.server.get_enable_introspection() && self.plan.is_introspection_query;
+        let flatten_response = self.flatten_response;
         let variables = &request.variables;
 
         // Attempt to skip unnecessary fields
@@ -102,10 +107,42 @@ impl ConstValueExecutor {
             let async_req = async_graphql::Request::from(request).only_introspection();
             let async_resp = app_ctx.execute(async_req).await;
 
-            resp.merge_with(&async_resp).into()
+            to_any_response(resp.merge_with(&async_resp), flatten_response)
         } else {
-            resp.into()
+            to_any_response(resp, flatten_response)
         }
+    }
+}
+
+fn to_any_response(
+    resp: Response<serde_json_borrow::Value>,
+    flatten: bool,
+) -> AnyResponse<Vec<u8>> {
+    if flatten {
+        if resp.errors.is_empty() {
+            AnyResponse {
+                body: Arc::new(
+                    serde_json::to_vec(flatten_response(&resp.data)).unwrap_or_default(),
+                ),
+                is_ok: true,
+                cache_control: resp.cache_control,
+            }
+        } else {
+            AnyResponse {
+                body: Arc::new(serde_json::to_vec(&resp).unwrap_or_default()),
+                is_ok: false,
+                cache_control: resp.cache_control,
+            }
+        }
+    } else {
+        resp.into()
+    }
+}
+
+fn flatten_response<'a, T: JsonLike<'a>>(data: &'a T) -> &'a T {
+    match data.as_object() {
+        Some(obj) if obj.len() == 1 => flatten_response(obj.iter().next().unwrap().1),
+        _ => data,
     }
 }
 

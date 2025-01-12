@@ -4,24 +4,26 @@ use async_graphql::dynamic::Schema;
 use tailcall_valid::{Cause, Valid, Validator};
 
 use super::{Error, Result};
-use crate::core::async_graphql_hyper::{GraphQLRequest, GraphQLRequestLike};
 use crate::core::blueprint::{Blueprint, SchemaModifiers};
 use crate::core::http::RequestContext;
 
 #[derive(Debug)]
 pub struct OperationQuery {
-    query: GraphQLRequest,
+    query: async_graphql::Request,
 }
 
 impl OperationQuery {
-    pub fn new(query: GraphQLRequest, request_context: Arc<RequestContext>) -> Result<Self> {
+    pub fn new(
+        query: async_graphql::Request,
+        request_context: Arc<RequestContext>,
+    ) -> Result<Self> {
         let query = query.data(request_context);
         Ok(Self { query })
     }
 
     async fn validate(self, schema: &Schema) -> Vec<Error> {
         schema
-            .execute(self.query.0)
+            .execute(self.query)
             .await
             .errors
             .iter()

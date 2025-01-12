@@ -56,6 +56,12 @@ pub enum Error {
     Unknown,
 }
 
+impl From<async_graphql::ServerError> for Error {
+    fn from(value: async_graphql::ServerError) -> Self {
+        Self::ServerError(value)
+    }
+}
+
 impl ErrorExtensions for Error {
     fn extend(&self) -> super::graphql_error::Error {
         match self {
