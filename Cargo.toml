@@ -27,7 +27,7 @@ serde = { version = "1.0.200", features = ["derive"] }
 derive_more = { version = "1", features = ["from", "debug"] }
 thiserror = "1.0.59"
 url = { version = "2.5.0", features = ["serde"] }
-convert_case = "0.6.0"
+convert_case = "0.7.0"
 tailcall-valid = "0.1.1"
 
 [dependencies]
