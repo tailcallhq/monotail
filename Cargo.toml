@@ -12,7 +12,7 @@ anyhow = "1.0.82"
 async-graphql = { version = "7.0.9" }
 futures-util = { version = "0.3.30" }
 indexmap = "2.2.6"
-headers = "0.3.9" # previous version until hyper is updated to 1+
+headers = "0.4.0" # previous version until hyper is updated to 1+
 http = "0.2.12" # previous version until hyper is updated to 1+
 insta = { version = "1.38.0", features = ["json"] }
 tokio = { version = "1.37.0", features = ["rt", "time"] }
