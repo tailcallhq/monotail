@@ -5,6 +5,6 @@ edition = "2021"
 publish = false
 
 [build-dependencies]
-convert_case = "0.6.0"
+convert_case = "0.7.0"
 indenter = { version = "0.3.3", features = ["std"] }
 derive_more = { workspace = true }
