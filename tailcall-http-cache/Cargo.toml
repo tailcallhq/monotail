@@ -5,7 +5,7 @@ edition = "2021"
 publish = false
 
 [dependencies]
-http-cache-reqwest = { version = "0.13.0", default-features = false, features = ["manager-moka"] }
+http-cache-reqwest = { version = "0.15.0", default-features = false, features = ["manager-moka"] }
 moka = { version = "0.12.7", default-features = false, features = [
     "future",
 ]}
