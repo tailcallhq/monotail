@@ -4,7 +4,7 @@ use derive_setters::Setters;
 use serde::Serialize;
 
 use super::graphql_error::GraphQLError;
-use super::Positioned;
+use super::{Pos, Positioned};
 use crate::core::async_graphql_hyper::CacheControl;
 use crate::core::jit;
 use crate::core::json::{JsonLike, JsonObjectLike};
@@ -30,6 +30,12 @@ impl<V: Default> Default for Response<V> {
             extensions: Default::default(),
             cache_control: Default::default(),
         }
+    }
+}
+
+impl<Value: Default> From<jit::Error> for Response<Value> {
+    fn from(value: jit::Error) -> Self {
+        Response::default().with_errors(vec![Positioned::new(value, Pos::default())])
     }
 }
 

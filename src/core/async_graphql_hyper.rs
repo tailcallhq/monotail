@@ -1,9 +1,10 @@
-use std::any::Any;
+use std::collections::HashMap;
 use std::hash::{Hash, Hasher};
 
 use anyhow::Result;
-use async_graphql::parser::types::{ExecutableDocument, OperationType};
-use async_graphql::{BatchResponse, Executor, Value};
+use async_graphql::parser::types::ExecutableDocument;
+use async_graphql::{BatchResponse, Value};
+use async_graphql_value::ConstValue;
 use http::header::{HeaderMap, HeaderValue, CACHE_CONTROL, CONTENT_TYPE};
 use http::{Response, StatusCode};
 use hyper::Body;
@@ -13,31 +14,16 @@ use tailcall_hasher::TailcallHasher;
 
 use super::jit::{BatchResponse as JITBatchResponse, JITExecutor};
 
+// TODO: replace usage with some other implementation.
+// This one is used to calculate hash and use the value later
+// as a key in the HashMap. But such use could lead to potential
+// issues in case of hash collisions
 #[derive(PartialEq, Eq, Clone, Hash, Debug)]
 pub struct OperationId(u64);
 
 #[async_trait::async_trait]
 pub trait GraphQLRequestLike: Hash + Send {
-    fn data<D: Any + Clone + Send + Sync>(self, data: D) -> Self;
-    async fn execute<E>(self, executor: &E) -> GraphQLResponse
-    where
-        E: Executor;
-
     async fn execute_with_jit(self, executor: JITExecutor) -> GraphQLArcResponse;
-
-    fn parse_query(&mut self) -> Option<&ExecutableDocument>;
-
-    fn is_query(&mut self) -> bool {
-        self.parse_query()
-            .map(|a| {
-                let mut is_query = false;
-                for (_, operation) in a.operations.iter() {
-                    is_query = operation.node.ty == OperationType::Query;
-                }
-                is_query
-            })
-            .unwrap_or(false)
-    }
 
     fn operation_id(&self, headers: &HeaderMap) -> OperationId {
         let mut hasher = TailcallHasher::default();
@@ -51,86 +37,101 @@ pub trait GraphQLRequestLike: Hash + Send {
     }
 }
 
-#[derive(Debug, Deserialize)]
-pub struct GraphQLBatchRequest(pub async_graphql::BatchRequest);
-impl GraphQLBatchRequest {}
-impl Hash for GraphQLBatchRequest {
-    //TODO: Fix Hash implementation for BatchRequest, which should ideally batch
-    // execution of individual requests instead of the whole chunk of requests as
-    // one.
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        for request in self.0.iter() {
-            request.query.hash(state);
-            request.operation_name.hash(state);
-            for (name, value) in request.variables.iter() {
-                name.hash(state);
-                value.to_string().hash(state);
-            }
-        }
-    }
+#[derive(Debug, Hash, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum BatchWrapper<T> {
+    Single(T),
+    Batch(Vec<T>),
 }
+
+pub type GraphQLBatchRequest = BatchWrapper<GraphQLRequest>;
+
 #[async_trait::async_trait]
-impl GraphQLRequestLike for GraphQLBatchRequest {
-    fn data<D: Any + Clone + Send + Sync>(mut self, data: D) -> Self {
-        for request in self.0.iter_mut() {
-            request.data.insert(data.clone());
-        }
-        self
-    }
-
+impl GraphQLRequestLike for BatchWrapper<GraphQLRequest> {
     async fn execute_with_jit(self, executor: JITExecutor) -> GraphQLArcResponse {
-        GraphQLArcResponse::new(executor.execute_batch(self.0).await)
-    }
-
-    /// Shortcut method to execute the request on the executor.
-    async fn execute<E>(self, executor: &E) -> GraphQLResponse
-    where
-        E: Executor,
-    {
-        GraphQLResponse(executor.execute_batch(self.0).await)
-    }
-
-    fn parse_query(&mut self) -> Option<&ExecutableDocument> {
-        None
+        GraphQLArcResponse::new(executor.execute_batch(self).await)
     }
 }
 
-#[derive(Debug, Deserialize)]
-pub struct GraphQLRequest(pub async_graphql::Request);
+#[derive(Debug, Default, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct GraphQLRequest {
+    #[serde(default)]
+    pub query: String,
+    #[serde(default)]
+    pub operation_name: Option<String>,
+    #[serde(default)]
+    pub variables: HashMap<String, ConstValue>,
+    #[serde(default)]
+    pub extensions: HashMap<String, ConstValue>,
+}
 
-impl GraphQLRequest {}
 impl Hash for GraphQLRequest {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        self.0.query.hash(state);
-        self.0.operation_name.hash(state);
-        for (name, value) in self.0.variables.iter() {
+        self.query.hash(state);
+        self.operation_name.hash(state);
+        for (name, value) in self.variables.iter() {
             name.hash(state);
             value.to_string().hash(state);
         }
     }
 }
+
+impl GraphQLRequest {
+    pub fn new(query: impl Into<String>) -> Self {
+        Self { query: query.into(), ..Default::default() }
+    }
+}
+
 #[async_trait::async_trait]
 impl GraphQLRequestLike for GraphQLRequest {
-    #[must_use]
-    fn data<D: Any + Send + Sync>(mut self, data: D) -> Self {
-        self.0.data.insert(data);
-        self
-    }
     async fn execute_with_jit(self, executor: JITExecutor) -> GraphQLArcResponse {
-        let response = executor.execute(self.0).await;
+        let response = executor.execute(self).await;
         GraphQLArcResponse::new(JITBatchResponse::Single(response))
     }
+}
 
-    /// Shortcut method to execute the request on the schema.
-    async fn execute<E>(self, executor: &E) -> GraphQLResponse
-    where
-        E: Executor,
-    {
-        GraphQLResponse(executor.execute(self.0).await.into())
+#[derive(Debug)]
+pub struct ParsedGraphQLRequest {
+    pub query: String,
+    pub operation_name: Option<String>,
+    pub variables: HashMap<String, ConstValue>,
+    pub extensions: HashMap<String, ConstValue>,
+    pub parsed_query: ExecutableDocument,
+}
+
+impl Hash for ParsedGraphQLRequest {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.query.hash(state);
+        self.operation_name.hash(state);
+        for (name, value) in self.variables.iter() {
+            name.hash(state);
+            value.to_string().hash(state);
+        }
     }
+}
 
-    fn parse_query(&mut self) -> Option<&ExecutableDocument> {
-        self.0.parsed_query().ok()
+impl TryFrom<GraphQLRequest> for ParsedGraphQLRequest {
+    type Error = async_graphql::parser::Error;
+
+    fn try_from(req: GraphQLRequest) -> std::result::Result<Self, Self::Error> {
+        let parsed_query = async_graphql::parser::parse_query(&req.query)?;
+
+        Ok(Self {
+            query: req.query,
+            operation_name: req.operation_name,
+            variables: req.variables,
+            extensions: req.extensions,
+            parsed_query,
+        })
+    }
+}
+
+#[async_trait::async_trait]
+impl GraphQLRequestLike for ParsedGraphQLRequest {
+    async fn execute_with_jit(self, executor: JITExecutor) -> GraphQLArcResponse {
+        let response = executor.execute(self).await;
+        GraphQLArcResponse::new(JITBatchResponse::Single(response))
     }
 }
 
@@ -145,42 +146,6 @@ impl From<async_graphql::BatchResponse> for GraphQLResponse {
 impl From<async_graphql::Response> for GraphQLResponse {
     fn from(res: async_graphql::Response) -> Self {
         Self(res.into())
-    }
-}
-
-impl From<GraphQLQuery> for GraphQLRequest {
-    fn from(query: GraphQLQuery) -> Self {
-        let mut request = async_graphql::Request::new(query.query);
-
-        if let Some(operation_name) = query.operation_name {
-            request = request.operation_name(operation_name);
-        }
-
-        if let Some(variables) = query.variables {
-            let value = serde_json::from_str(&variables).unwrap_or_default();
-            let variables = async_graphql::Variables::from_json(value);
-            request = request.variables(variables);
-        }
-
-        GraphQLRequest(request)
-    }
-}
-
-#[derive(Debug)]
-pub struct GraphQLQuery {
-    query: String,
-    operation_name: Option<String>,
-    variables: Option<String>,
-}
-
-impl GraphQLQuery {
-    /// Shortcut method to execute the request on the schema.
-    pub async fn execute<E>(self, executor: &E) -> GraphQLResponse
-    where
-        E: Executor,
-    {
-        let request: GraphQLRequest = self.into();
-        request.execute(executor).await
     }
 }
 
@@ -407,6 +372,17 @@ impl GraphQLArcResponse {
 
     pub fn into_response(self) -> Result<Response<hyper::Body>> {
         self.build_response(StatusCode::OK, self.default_body()?)
+    }
+
+    /// Transforms a plain `GraphQLResponse` into a `Response<Body>`.
+    /// Differs as `to_response` by flattening the response's data
+    /// `{"data": {"user": {"name": "John"}}}` becomes `{"name": "John"}`.
+    pub fn into_rest_response(self) -> Result<Response<hyper::Body>> {
+        if !self.response.is_ok() {
+            return self.build_response(StatusCode::INTERNAL_SERVER_ERROR, self.default_body()?);
+        }
+
+        self.into_response()
     }
 }
 

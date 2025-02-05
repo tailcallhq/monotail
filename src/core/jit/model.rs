@@ -20,6 +20,12 @@ use crate::core::scalar::Scalar;
 #[derive(Debug, Deserialize, Clone)]
 pub struct Variables<Value>(HashMap<String, Value>);
 
+impl<Value> From<HashMap<String, Value>> for Variables<Value> {
+    fn from(value: HashMap<String, Value>) -> Self {
+        Self(value)
+    }
+}
+
 impl<V: JsonLikeOwned + Display> PathString for Variables<V> {
     fn path_string<'a, T: AsRef<str>>(&'a self, path: &'a [T]) -> Option<Cow<'a, str>> {
         self.get(path[0].as_ref())
@@ -295,6 +301,10 @@ impl<Input: Debug> Debug for Field<Input> {
     }
 }
 
+// TODO: replace usage with some other implementation.
+// This one is used to calculate hash and use the value later
+// as a key in the HashMap. But such use could lead to potential
+// issues in case of hash collisions
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub struct OPHash(u64);
 
@@ -581,10 +591,10 @@ impl From<ServerError> for Positioned<Error> {
 #[cfg(test)]
 mod test {
     use async_graphql::parser::types::ConstDirective;
-    use async_graphql::Request;
     use async_graphql_value::ConstValue;
 
     use super::{Directive, OperationPlan};
+    use crate::core::async_graphql_hyper::GraphQLRequest;
     use crate::core::blueprint::Blueprint;
     use crate::core::config::ConfigModule;
     use crate::core::jit;
@@ -595,8 +605,8 @@ mod test {
         let module = ConfigModule::from(config);
         let bp = Blueprint::try_from(&module).unwrap();
 
-        let request = Request::new(query);
-        let jit_request = jit::Request::from(request);
+        let request = GraphQLRequest::new(query);
+        let jit_request = jit::Request::try_from(request).unwrap();
         jit_request.create_plan(&bp).unwrap()
     }
 

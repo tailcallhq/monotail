@@ -11,7 +11,6 @@ use super::path::{Path, Segment};
 use super::query_params::QueryParams;
 use super::type_map::TypeMap;
 use super::{Request, Result};
-use crate::core::async_graphql_hyper::GraphQLRequest;
 use crate::core::directive::DirectiveCodec;
 use crate::core::http::Method;
 use crate::core::rest::typed_variables::{UrlParamType, N};
@@ -83,11 +82,11 @@ impl Endpoint {
         Ok(endpoints)
     }
 
-    pub fn into_request(self) -> GraphQLRequest {
+    pub fn into_request(self) -> async_graphql::Request {
         let variables = Self::get_default_variables(&self);
         let mut req = async_graphql::Request::new("").variables(variables);
         req.set_parsed_query(Self::remove_rest_directives(self.doc));
-        GraphQLRequest(req)
+        req
     }
 
     fn get_default_variables(endpoint: &Endpoint) -> Variables {

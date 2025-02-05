@@ -53,6 +53,10 @@ impl From<Positioned<super::Error>> for GraphQLError {
             return e.into();
         }
 
+        if let super::Error::ServerError(e) = inner_value {
+            return e.into();
+        }
+
         let ext = inner_value.extend().extensions;
         let mut server_error = GraphQLError::new(inner_value.to_string(), Some(position));
         server_error.extensions = ext;
