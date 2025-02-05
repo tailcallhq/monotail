@@ -121,7 +121,7 @@ tracing-subscriber = { version = "0.3.18", features = [
     "env-filter",
 ] }
 tracing-opentelemetry = "0.24.0"
-getrandom = { version = "0.2.14", features = ["js"] }
+getrandom = { version = "0.3.0", features = ["js"] }
 prometheus = "0.13.4"
 tonic = { version = "0.11.0", default-features = false }
 opentelemetry-semantic-conventions = "0.15.0"
