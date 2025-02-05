@@ -12,6 +12,7 @@ use tailcall_hasher::TailcallHasher;
 use super::{AnyResponse, BatchResponse, Response};
 use crate::core::app_context::AppContext;
 use crate::core::async_graphql_hyper::OperationId;
+use crate::core::helpers::value::arc_result_to_result;
 use crate::core::http::RequestContext;
 use crate::core::jit::{self, ConstValueExecutor, OPHash, Pos, Positioned};
 
@@ -53,12 +54,12 @@ impl JITExecutor {
             .dedupe(&self.operation_id, || {
                 Box::pin(async move {
                     let resp = self.exec(exec, jit_request).await;
-                    Ok(resp)
+                    Arc::new(Ok(resp))
                 })
             })
             .await;
 
-        out.unwrap_or_default()
+        arc_result_to_result(out).unwrap_or_default()
     }
 
     #[inline(always)]

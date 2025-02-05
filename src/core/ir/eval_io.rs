@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use async_graphql_value::ConstValue;
 
 use super::eval_http::{
@@ -14,7 +16,7 @@ use crate::core::grpc::data_loader::GrpcDataLoader;
 use crate::core::http::DataLoaderRequest;
 use crate::core::ir::Error;
 
-pub async fn eval_io<Ctx>(io: &IO, ctx: &mut EvalContext<'_, Ctx>) -> Result<ConstValue, Error>
+pub async fn eval_io<Ctx>(io: &IO, ctx: &mut EvalContext<'_, Ctx>) -> Arc<Result<ConstValue, Error>>
 where
     Ctx: ResolverContextLike + Sync,
 {
@@ -23,7 +25,7 @@ where
     let dedupe = io.dedupe();
 
     if !dedupe || !ctx.is_query() {
-        return eval_io_inner(io, ctx).await;
+        return eval_io_inner_arc(io, ctx).await;
     }
     if let Some(key) = io.cache_key(ctx) {
         ctx.request_ctx
@@ -31,12 +33,12 @@ where
             .dedupe(&key, || async {
                 ctx.request_ctx
                     .dedupe_handler
-                    .dedupe(&key, || eval_io_inner(io, ctx))
+                    .dedupe(&key, || eval_io_inner_arc(io, ctx))
                     .await
             })
             .await
     } else {
-        eval_io_inner(io, ctx).await
+        eval_io_inner_arc(io, ctx).await
     }
 }
 
@@ -115,4 +117,14 @@ where
             }
         }
     }
+}
+
+async fn eval_io_inner_arc<Ctx>(
+    io: &IO,
+    ctx: &mut EvalContext<'_, Ctx>,
+) -> Arc<Result<ConstValue, Error>>
+where
+    Ctx: ResolverContextLike + Sync,
+{
+    return Arc::new(eval_io_inner(io, ctx).await);
 }
